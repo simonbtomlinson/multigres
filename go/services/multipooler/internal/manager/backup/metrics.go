@@ -59,7 +59,8 @@ type Metrics struct {
 	leaseHeld                 metric.Int64ObservableGauge
 }
 
-// NewMetrics creates and registers the pgBackRest backup counters and declares
+// NewMetrics creates and registers the pgBackRest backup counters, seeded with
+// zero so they are exported before the first backup or restore, and declares
 // the HealthTracker-backed observable gauges. It always returns a non-nil
 // *Metrics; any registration errors are collected and returned. The gauges are
 // not observed until RegisterHealthCallback wires them to a tracker.
@@ -69,48 +70,57 @@ func NewMetrics() (*Metrics, error) {
 
 	var errs []error
 
+	ctx := context.TODO()
+
 	var err error
 	m.backupAttempts, err = meter.Int64Counter(
 		"pgbackrest.backup.attempts",
 		metric.WithDescription("Total number of backup attempts"),
 	)
 	errs = append(errs, err)
+	m.backupAttempts.Add(ctx, 0)
 
 	m.backupSuccesses, err = meter.Int64Counter(
 		"pgbackrest.backup.successes",
 		metric.WithDescription("Total number of successful backups"),
 	)
 	errs = append(errs, err)
+	m.backupSuccesses.Add(ctx, 0)
 
 	m.backupFailures, err = meter.Int64Counter(
 		"pgbackrest.backup.failures",
 		metric.WithDescription("Total number of failed backups"),
 	)
 	errs = append(errs, err)
+	m.backupFailures.Add(ctx, 0)
 
 	m.restoreAttempts, err = meter.Int64Counter(
 		"pgbackrest.restore.attempts",
 		metric.WithDescription("Total number of restore attempts"),
 	)
 	errs = append(errs, err)
+	m.restoreAttempts.Add(ctx, 0)
 
 	m.restoreSuccesses, err = meter.Int64Counter(
 		"pgbackrest.restore.successes",
 		metric.WithDescription("Total number of successful restores"),
 	)
 	errs = append(errs, err)
+	m.restoreSuccesses.Add(ctx, 0)
 
 	m.restoreFailures, err = meter.Int64Counter(
 		"pgbackrest.restore.failures",
 		metric.WithDescription("Total number of failed restores"),
 	)
 	errs = append(errs, err)
+	m.restoreFailures.Add(ctx, 0)
 
 	m.leaseLost, err = meter.Int64Counter(
 		"pgbackrest.backup.lease.lost",
 		metric.WithDescription("Total number of times this pooler lost the backup lease mid-operation (stolen or expired)"),
 	)
 	errs = append(errs, err)
+	m.leaseLost.Add(ctx, 0)
 
 	m.backupDuration, err = meter.Float64Histogram(
 		"pgbackrest.backup.duration",

@@ -163,6 +163,30 @@ func TestMetrics_LeaseLost(t *testing.T) {
 	assert.Equal(t, int64(2), counterValue(lost))
 }
 
+// TestMetrics_CountersExportedAtZeroBeforeFirstIncrement verifies that every
+// backup and restore counter is exported at 0 as soon as the metrics are
+// created, so a pooler that has never taken a backup or restored (e.g. a
+// replica) reports 0 rather than no series at all.
+func TestMetrics_CountersExportedAtZeroBeforeFirstIncrement(t *testing.T) {
+	_, reader := setupMetrics(t)
+
+	for _, name := range []string{
+		"pgbackrest.backup.attempts",
+		"pgbackrest.backup.successes",
+		"pgbackrest.backup.failures",
+		"pgbackrest.restore.attempts",
+		"pgbackrest.restore.successes",
+		"pgbackrest.restore.failures",
+		"pgbackrest.backup.lease.lost",
+	} {
+		sum := getCounterInt64(t, reader, name)
+		require.NotNil(t, sum, "%s should be exported before its first increment", name)
+		require.Len(t, sum.DataPoints, 1, "%s should export a single unlabeled series", name)
+		assert.Equal(t, 0, sum.DataPoints[0].Attributes.Len(), "%s should have no attributes", name)
+		assert.Equal(t, int64(0), sum.DataPoints[0].Value, "%s should start at 0", name)
+	}
+}
+
 // TestMetrics_NewMetrics_ReturnsNonNil verifies that NewMetrics() returns non-nil
 // even with the default (noop) provider.
 func TestMetrics_NewMetrics_ReturnsNonNil(t *testing.T) {
